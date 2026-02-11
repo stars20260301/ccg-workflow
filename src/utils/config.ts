@@ -46,6 +46,7 @@ export function createDefaultConfig(options: {
   installedWorkflows: string[]
   mcpProvider?: string
   liteMode?: boolean
+  templateVersion?: 'v1' | 'v2'
 }): CcgConfig {
   return {
     general: {
@@ -68,6 +69,9 @@ export function createDefaultConfig(options: {
     },
     performance: {
       liteMode: options.liteMode || false,
+    },
+    template: {
+      version: options.templateVersion || 'v1',
     },
   }
 }

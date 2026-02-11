@@ -52,6 +52,9 @@ export interface CcgConfig {
   performance?: {
     liteMode?: boolean // 轻量模式：禁用 Web UI，更快响应
   }
+  template?: {
+    version?: 'v1' | 'v2' // v1: 25命令完整版, v2: 5命令精简版
+  }
 }
 
 // 工作流定义

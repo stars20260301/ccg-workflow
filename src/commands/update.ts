@@ -78,6 +78,36 @@ export async function update(): Promise<void> {
       return
     }
 
+    // Template version selection during update
+    const currentTemplateVersion = config?.template?.version || 'v1'
+    console.log()
+    console.log(ansis.cyan.bold('📦 命令模板版本'))
+    console.log(ansis.gray(`   当前: ${currentTemplateVersion}`))
+    console.log()
+
+    const { switchVersion } = await inquirer.prompt([{
+      type: 'list',
+      name: 'switchVersion',
+      message: '选择命令模板版本',
+      choices: [
+        {
+          name: `v2 新版 ${ansis.green('(推荐)')} ${ansis.gray('- Agent Teams + OpenSpec 约束集，5 个核心命令')}`,
+          value: 'v2',
+        },
+        {
+          name: `v1 老版本 ${ansis.gray('- 25 个命令，传统多模型协作')}`,
+          value: 'v1',
+        },
+      ],
+      default: currentTemplateVersion,
+    }])
+
+    // Save template version to config before update
+    if (config) {
+      config.template = { version: switchVersion }
+      await writeCcgConfig(config)
+    }
+
     // Pass localVersion as fromVersion for accurate display
     const fromVersion = needsWorkflowUpdate ? localVersion : currentVersion
     await performUpdate(fromVersion, latestVersion || currentVersion, hasUpdate || needsWorkflowUpdate)
@@ -347,11 +377,12 @@ async function performUpdate(fromVersion: string, toVersion: string, isNewVersio
     spinner.succeed('新版本安装成功')
 
     // Read updated config to display installed commands
-    const config = await readCcgConfig()
-    if (config?.workflows?.installed) {
+    const updatedConfig = await readCcgConfig()
+    const installedList = updatedConfig?.workflows?.installed || []
+    if (installedList.length > 0) {
       console.log()
-      console.log(ansis.cyan(`已安装 ${config.workflows.installed.length} 个命令:`))
-      for (const cmd of config.workflows.installed) {
+      console.log(ansis.cyan(`已安装 ${installedList.length} 个命令:`))
+      for (const cmd of installedList) {
         console.log(`  ${ansis.gray('•')} /ccg:${cmd}`)
       }
     }

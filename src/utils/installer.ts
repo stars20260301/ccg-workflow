@@ -52,6 +52,15 @@ const ALL_COMMANDS = [
   'team-review', // Agent Teams 审查（双模型交叉审查并行产出）
 ] as const
 
+// V2 commands (新版 5 命令)
+export const V2_COMMANDS = [
+  'workflow',
+  'plan',
+  'review',
+  'commit',
+  'init',
+] as const
+
 // Workflow configurations (for compatibility with existing code)
 const WORKFLOW_CONFIGS: WorkflowConfig[] = [
   {
@@ -530,6 +539,7 @@ export async function installWorkflows(
     }
     liteMode?: boolean
     mcpProvider?: string
+    templateVersion?: 'v1' | 'v2'
   },
 ): Promise<InstallResult> {
   // Default config
@@ -561,33 +571,60 @@ export async function installWorkflows(
 
   // Get template source directory (relative to this package)
   const templateDir = join(PACKAGE_ROOT, 'templates')
+  const templateVersion = config?.templateVersion || 'v1'
+  const commandsSrcDir = templateVersion === 'v2'
+    ? join(templateDir, 'commands-v2')
+    : join(templateDir, 'commands')
 
   // Install commands
-  for (const workflowId of workflowIds) {
-    const workflow = getWorkflowById(workflowId)
-    if (!workflow) {
-      result.errors.push(`Unknown workflow: ${workflowId}`)
-      continue
-    }
-
-    for (const cmd of workflow.commands) {
-      const srcFile = join(templateDir, 'commands', `${cmd}.md`)
-      const destFile = join(commandsDir, `${cmd}.md`)
-
-      try {
-        if (await fs.pathExists(srcFile)) {
-          if (force || !(await fs.pathExists(destFile))) {
-            // Read template content, inject config variables, replace ~ paths, then write
-            let templateContent = await fs.readFile(srcFile, 'utf-8')
-            templateContent = injectConfigVariables(templateContent, installConfig)
-            const processedContent = replaceHomePathsInTemplate(templateContent, installDir)
-            await fs.writeFile(destFile, processedContent, 'utf-8')
-            result.installedCommands.push(cmd)
-          }
+  if (templateVersion === 'v2') {
+    // v2: 直接扫描 commands-v2/ 目录，不走 workflowId 映射
+    try {
+      const files = await fs.readdir(commandsSrcDir)
+      for (const file of files) {
+        if (!file.endsWith('.md')) continue
+        const cmd = file.replace('.md', '')
+        const srcFile = join(commandsSrcDir, file)
+        const destFile = join(commandsDir, `${cmd}.md`)
+        if (force || !(await fs.pathExists(destFile))) {
+          let templateContent = await fs.readFile(srcFile, 'utf-8')
+          templateContent = injectConfigVariables(templateContent, installConfig)
+          const processedContent = replaceHomePathsInTemplate(templateContent, installDir)
+          await fs.writeFile(destFile, processedContent, 'utf-8')
+          result.installedCommands.push(cmd)
         }
-        else {
-          // If template doesn't exist, create placeholder
-          const placeholder = `---
+      }
+    }
+    catch (error) {
+      result.errors.push(`Failed to install v2 commands: ${error}`)
+      result.success = false
+    }
+  }
+  else {
+    // v1: 原有逻辑，按 workflowId 映射安装
+    for (const workflowId of workflowIds) {
+      const workflow = getWorkflowById(workflowId)
+      if (!workflow) {
+        result.errors.push(`Unknown workflow: ${workflowId}`)
+        continue
+      }
+
+      for (const cmd of workflow.commands) {
+        const srcFile = join(commandsSrcDir, `${cmd}.md`)
+        const destFile = join(commandsDir, `${cmd}.md`)
+
+        try {
+          if (await fs.pathExists(srcFile)) {
+            if (force || !(await fs.pathExists(destFile))) {
+              let templateContent = await fs.readFile(srcFile, 'utf-8')
+              templateContent = injectConfigVariables(templateContent, installConfig)
+              const processedContent = replaceHomePathsInTemplate(templateContent, installDir)
+              await fs.writeFile(destFile, processedContent, 'utf-8')
+              result.installedCommands.push(cmd)
+            }
+          }
+          else {
+            const placeholder = `---
 description: "${workflow.descriptionEn}"
 ---
 
@@ -597,13 +634,14 @@ ${workflow.description}
 
 > This command is part of CCG multi-model collaboration system.
 `
-          await fs.writeFile(destFile, placeholder, 'utf-8')
-          result.installedCommands.push(cmd)
+            await fs.writeFile(destFile, placeholder, 'utf-8')
+            result.installedCommands.push(cmd)
+          }
         }
-      }
-      catch (error) {
-        result.errors.push(`Failed to install ${cmd}: ${error}`)
-        result.success = false
+        catch (error) {
+          result.errors.push(`Failed to install ${cmd}: ${error}`)
+          result.success = false
+        }
       }
     }
   }

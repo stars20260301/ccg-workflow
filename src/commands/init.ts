@@ -7,7 +7,7 @@ import { homedir } from 'node:os'
 import { join } from 'pathe'
 import { i18n } from '../i18n'
 import { createDefaultConfig, ensureCcgDir, getCcgDir, readCcgConfig, writeCcgConfig } from '../utils/config'
-import { getAllCommandIds, installAceTool, installAceToolRs, installContextWeaver, installWorkflows } from '../utils/installer'
+import { getAllCommandIds, installAceTool, installAceToolRs, installContextWeaver, installWorkflows, V2_COMMANDS } from '../utils/installer'
 import { migrateToV1_4_0, needsMigration } from '../utils/migration'
 
 export async function init(options: InitOptions = {}): Promise<void> {
@@ -21,7 +21,45 @@ export async function init(options: InitOptions = {}): Promise<void> {
   const frontendModels: ModelType[] = ['gemini']
   const backendModels: ModelType[] = ['codex']
   const mode: CollaborationMode = 'smart'
-  const selectedWorkflows = getAllCommandIds()
+
+  // Template version selection
+  let templateVersion: 'v1' | 'v2' = 'v1'
+
+  if (!options.skipPrompt) {
+    console.log()
+    console.log(ansis.cyan.bold(`  📦 命令版本选择`))
+    console.log()
+
+    const { selectedVersion } = await inquirer.prompt([{
+      type: 'list',
+      name: 'selectedVersion',
+      message: '选择命令模板版本',
+      choices: [
+        {
+          name: `v2 新版 ${ansis.green('(推荐)')} ${ansis.gray('- Agent Teams + OpenSpec 约束集，5 个核心命令')}`,
+          value: 'v2',
+        },
+        {
+          name: `v1 老版本 ${ansis.gray('- 25 个命令，传统多模型协作')}`,
+          value: 'v1',
+        },
+      ],
+      default: 'v2',
+    }])
+
+    templateVersion = selectedVersion
+  }
+  else {
+    // Non-interactive: preserve existing templateVersion
+    const existingConfig = await readCcgConfig()
+    if (existingConfig?.template?.version) {
+      templateVersion = existingConfig.template.version
+    }
+  }
+
+  const selectedWorkflows = templateVersion === 'v2'
+    ? V2_COMMANDS.map(cmd => cmd)
+    : getAllCommandIds()
 
   // Performance mode selection
   let liteMode = false
@@ -324,6 +362,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
       installedWorkflows: selectedWorkflows,
       mcpProvider,
       liteMode,
+      templateVersion,
     })
 
     // Save config FIRST - ensure it's created even if installation fails
@@ -335,6 +374,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
       routing,
       liteMode,
       mcpProvider,
+      templateVersion,
     })
 
     // Install ace-tool or ace-tool-rs MCP if token was provided
