@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="assets/logo/ccg-logo-cropped.png" alt="CCG Workflow" width="400">
+
 [![npm version](https://img.shields.io/npm/v/ccg-workflow.svg)](https://www.npmjs.com/package/ccg-workflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-green.svg)](https://claude.ai/code)
@@ -11,6 +13,18 @@
 简体中文 | [English](./README.md)
 
 </div>
+
+## ♥️ 赞助商
+
+[![302.AI](assets/sponsors/302.ai.jpg)](https://share.302.ai/oUDqQ6)
+
+[302.AI](https://share.302.ai/oUDqQ6) 是一个按用量付费的企业级 AI 资源平台，提供市场上最新、最全面的 AI 模型和 API，以及多种开箱即用的在线 AI 应用。
+
+---
+
+[**n1n.ai**](https://api.n1n.ai/register?channel=c_ivgzug0w) — 企业级 LLM API 聚合平台，一个 API Key 连接全球 500+ 顶尖 AI 模型（GPT-5、Claude 4.5、Gemini 3 Pro 等）。
+
+---
 
 Claude Code 编排 Codex + Gemini 的多模型协作开发系统。前端任务路由至 Gemini，后端任务路由至 Codex，Claude 负责编排决策和代码审核。
 
@@ -363,4 +377,4 @@ MIT
 
 ---
 
-v2.1.11 | [Issues](https://github.com/fengshao1227/ccg-workflow/issues) | [参与贡献](./CONTRIBUTING.md)
+v2.1.16 | [Issues](https://github.com/fengshao1227/ccg-workflow/issues) | [参与贡献](./CONTRIBUTING.md)

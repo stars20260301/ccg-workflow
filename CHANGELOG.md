@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.16] - 2026-04-10
+
+### ✨ 新功能
+
+- **Init 交互状态机**：`init` 流程重构为状态机模式，支持在每步中途返回上一步，解决"填错一个 URL/KEY 就要 Ctrl+C 全部重来"的痛点。每个 Step 的首个 list 选项末尾内嵌 `← 返回上一步` 和 `× 取消安装` 哨兵（Step 1 只有取消）。Step 3（MCP）因原首 prompt 是 checkbox 多选，加入前导 list 守门支持返回。
+- **摘要页跳回菜单**：最终确认页从 `confirm: yes/no` 改为 list 菜单，支持"确认安装 / 改 API 配置 / 改模型路由 / 改 MCP 工具 / 改性能模式 / 取消安装"。选"改 XXX"跳回对应 Step 重跑一次后直接回到摘要页，不用再走一遍后续步骤。
+- **API 跳过选项**：Step 1/4 API 提供方菜单新增第 4 个选项 `○ 跳过 — 我已通过 cc-switch / 其他工具自行配置`。选它后 CCG 不会写入 `settings.json` 的 `ANTHROPIC_BASE_URL/AUTH_TOKEN`，适用于已通过其他工具配好 API 的用户。
+
+### 🔄 变更
+
+- **重构 `src/commands/init.ts`**：Step 1-4 抽取为 `runApiStep / runModelStep / runMcpStep / runPerfStep` 闭包函数 + 主循环状态机，原 `Show summary / Confirm` 合并入 `runSummaryStep`。非交互模式（`--skip-prompt`）逻辑保持不变。net +200 行。
+- **i18n 新增 key**：`init.nav.*`、`init.summaryMenu.*`、`init.api.skipOption/skipNoticeTitle`、`init.mcp.gatePrompt/gateContinue`、`init.summary.apiProvider/apiSelfManaged/geminiModel`（中英双语）。
+
+---
+
+## [2.1.15] - 2026-04-10
+
+### 🐛 修复
+
+- **`--gemini-model` 注入到纯 codex 调用行**（#130）：`injectConfigVariables()` 全局替换 `{{GEMINI_MODEL_FLAG}}`，不区分当前行的后端硬编码。导致用户配置 `Frontend: gemini + Backend: codex` 后，`/ccg:backend`、`/ccg:codex-exec` 等纯 codex 调用被注入 `--gemini-model gemini-3.1-pro-preview` 冗余参数。虽然 `codeagent-wrapper` 有兜底 warn + ignore 不影响执行，但命令看起来混乱且有误导性。改为**行级感知替换**：硬编码 `--backend gemini` 或条件行 `--backend <codex|gemini>` 保留 flag，纯 `--backend codex/claude` 行清除。
+- **新增 11 个单元测试**：覆盖 codex-only / gemini-only / 条件行 / 前后端交叉 / 无 gemini / 默认模型 / 自定义模型 / 真实模板集成测试
+
+---
+
+## [2.1.14] - 2026-04-07
+
+### 🐛 修复
+
+- **模型路由硬编码导致非默认配置失效**：21 个模板文件中 ROLE_FILE 路径、表头、执行指令硬编码了 `codex/` 和 `gemini/`，导致用户配置 `Frontend: codex` 后 Claude 仍尝试调用 Gemini（exit code 127）。全量替换为 `{{BACKEND_PRIMARY}}/` 和 `{{FRONTEND_PRIMARY}}/` 模板变量，安装时按路由配置动态生成
+
+---
+
+## [2.1.13] - 2026-04-05
+
+### 🐛 修复
+
+- **Windows Gemini 多行参数截断**（#129）：Windows 上 npm `.cmd` wrapper 经由 cmd.exe 转发时截断多行 `-p` 参数，导致 Gemini 仅接收到角色设定首行而不执行任务。修复：Windows 平台改用 stdin pipe 传递任务内容，不再使用 `-p` 参数
+- **Binary 版本升级**：`5.9.0` → `5.10.0`
+
+---
+
+## [2.1.12] - 2026-04-03
+
+### ✨ 新功能
+
+- **302.AI 赞助商集成**（#126）：init Step 1/4 和菜单 API 配置新增 302.AI 选项，自动填入 baseUrl，用户仅需输入 API Key
+- **README 赞助商 Banner**：中英文 README 顶部新增 302.AI 可点击 Banner + 产品介绍
+
+---
+
 ## [2.1.11] - 2026-03-31
 
 ### 🐛 修复
